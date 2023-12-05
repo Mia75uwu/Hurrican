@@ -77,6 +77,24 @@ class ConsoleClass {
 
     void print(const std::string &output);
     void print(const char *output);
+
+    namespace Command {
+      void Help();
+      void Clear();
+      void LevelInfo();
+      void Quit();
+    };
+    namespace Cheat {
+      void ExtraWeapons();
+      void Time();
+      void MaxWeapons();
+      void Health();
+      void Supershot();
+      void Autofire();
+      void FlameThrower();
+      void GodMode();
+      void WhellMode();
+    };
 };
 
 // --------------------------------------------------------------------------------------

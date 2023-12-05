@@ -16,6 +16,7 @@
 #include <string.h>
 #include <string>
 #include <filesystem>
+#include <map>
 namespace fs = std::filesystem;
 #include "Console.hpp"
 #include "DX8Graphics.hpp"
@@ -166,173 +167,163 @@ bool ConsoleClass::CONSOLE_CHEAT(char *cheat) {
 }
 
 // --------------------------------------------------------------------------------------
+// All the functions for the commands
+// --------------------------------------------------------------------------------------
+
+void ConsoleClass::Command::Help() {
+    this->print(" ");
+    this->print("Console Commands");
+    this->print("-------------------------");
+    this->print(" ");
+    this->print("clear - clear console");
+    this->print("levelinfo - show level information");
+    this->print("maxfps x - set maximum framerate to 'x' (0=no maximum)");
+    this->print("setspeed x - Set Game-speed (default=10)");
+    this->print("loadmap 'name' - load level 'name'");
+    this->print("minimap - save minimap to disc");
+    this->print("quit - Quit game immediately");
+}
+
+void ConsoleClass::Command::Clear() {
+    if (CONSOLE_COMMAND("clear")) {
+    for (int i = 0; i < MAX_LINES; i++)
+        strcpy_s(Text[i], "");
+
+    strcpy_s(Buffer, "");
+    CursorChar[0] = ' ';
+}
+
+void ConsoleClass::Command::LevelInfo() {
+    std::string StringBuffer;
+
+    this->print(" ");
+    this->print("Levelinfo");
+    this->print("-------------");
+    this->print(" ");
+
+    this->print(TileEngine.Beschreibung);
+
+    StringBuffer = "Level Offset X : ";
+    StringBuffer += std::to_string(TileEngine.XOffset);
+    this->print(StringBuffer);
+
+    StringBuffer = "Level Offset Y : ";
+    StringBuffer += std::to_string(TileEngine.XOffset);
+    this->print(StringBuffer);
+
+    StringBuffer = "Level Size X : ";
+    StringBuffer += std::to_string(TileEngine.LEVELSIZE_X);
+    this->print(StringBuffer);
+
+    StringBuffer = "Level Size Y : ";
+    StringBuffer += std::to_string(TileEngine.LEVELSIZE_Y);
+    this->print(StringBuffer);
+}
+
+void ConsoleClass::Command::Quit() {
+    this->print("Shutting down ...");
+    GameRunning = false;
+}
+
+void ConsoleClass::Cheat::ExtraWeapons() {
+    if (CONSOLE_CHEAT(Cheats[CHEAT::EXTRAS])) {
+    for (int p = 0; p < NUMPLAYERS; p++) {
+        Player[p].PowerLines = 999;
+        Player[p].Grenades = 999;
+        Player[p].SmartBombs = 999;
+    }
+
+    this->print("-> Let's rock!");
+}
+
+void ConsoleClass::Cheat::Time() {
+    TileEngine.Timelimit = 999.0f;
+
+    this->print("-> knowing that there's no rhyme...");
+}
+
+void ConsoleClass::Cheat::MaxWeapons() {
+    for (int p = 0; p < NUMPLAYERS; p++) {
+        Player[p].CurrentWeaponLevel[3] = 16;
+
+        for (int w = 0; w <= 2; w++)
+            Player[p].CurrentWeaponLevel[w] = 8;
+    }
+
+    this->print("-> Blast Off and Strike The Evil Bydo Empire!");
+}
+
+void ConsoleClass::Cheat::Health() {
+    for (int i = 0; i < NUMPLAYERS; i++) {
+        Player[i].Lives = 99;
+    }
+
+    strcpy_s(Buffer, "-> Live long and prosper!");
+}
+
+void ConsoleClass::Cheat::Supershot() {
+    for (int i = 0; i < NUMPLAYERS; i++)
+        Player[i].RiesenShotExtra += 500;
+
+    strcpy_s(Buffer, "-> Supershot");
+}
+
+void ConsoleClass::Cheat::Autofire() {
+    if (CONSOLE_CHEAT(Cheats[CHEAT::AUTOFIRE])) {
+    for (int i = 0; i < NUMPLAYERS; i++)
+        Player[i].AutoFireExtra += 500;
+
+    strcpy_s(Buffer, "-> Autofire");
+}
+
+void ConsoleClass::Cheat::FlameThrower() {
+    FlameThrower = !FlameThrower;
+
+    if (FlameThrower) {
+        this->print("-> Flamethrower on");
+    } else {
+        this->print("-> Flamethrower off");
+    }
+}
+
+void ConsoleClass::Cheat::GodMode() {
+    if (Player[0].GodMode == false) {
+        Player[0].GodMode = true;
+        Player[1].GodMode = true;
+        this->print("-> Godmode on");
+    } else {
+        Player[0].GodMode = false;
+        Player[1].GodMode = false;
+        this->print("-> Godmode off");
+    }
+}
+
+void ConsoleClass::Cheat::WheelMode() {
+    if (Player[0].WheelMode == false) {
+        Player[0].WheelMode = true;
+        Player[1].WheelMode = true;
+        this->print("-> WheelMode on");
+    } else {
+        Player[0].WheelMode = false;
+        Player[1].WheelMode = false;
+        this->print("-> WheelMode off");
+    }
+}
+
+// --------------------------------------------------------------------------------------
 // Text checken, wenn Enter gedrückt wurde
 // --------------------------------------------------------------------------------------
 
 void ConsoleClass::CheckCommands() {
-    // Hilfe
-    //
-    // DKS - Re-enabled help, as it seems to be just fine
-    //#ifndef NDEBUG
-    // TODO FIX
-    if (CONSOLE_COMMAND("help")) {
-        this->print(" ");
-        this->print("Console Commands");
-        this->print("-------------------------");
-        this->print(" ");
-        this->print("clear - clear console");
-        this->print("levelinfo - show level information");
-        this->print("maxfps x - set maximum framerate to 'x' (0=no maximum)");
-        this->print("setspeed x - Set Game-speed (default=10)");
-        this->print("loadmap 'name' - load level 'name'");
-        this->print("minimap - save minimap to disc");
-        this->print("quit - Quit game immediately");
-    } else
-
-        // Konsole löschen
-        if (CONSOLE_COMMAND("clear")) {
-        for (int i = 0; i < MAX_LINES; i++)
-            strcpy_s(Text[i], "");
-
-        strcpy_s(Buffer, "");
-        CursorChar[0] = ' ';
-    } else
-
-        // Levelinfo anzeigen
-        if (CONSOLE_COMMAND("levelinfo")) {
-        std::string StringBuffer;
-
-        this->print(" ");
-        this->print("Levelinfo");
-        this->print("-------------");
-        this->print(" ");
-
-        this->print(TileEngine.Beschreibung);
-
-        StringBuffer = "Level Offset X : ";
-        StringBuffer += std::to_string(TileEngine.XOffset);
-        this->print(StringBuffer);
-
-        StringBuffer = "Level Offset Y : ";
-        StringBuffer += std::to_string(TileEngine.XOffset);
-        this->print(StringBuffer);
-
-        StringBuffer = "Level Size X : ";
-        StringBuffer += std::to_string(TileEngine.LEVELSIZE_X);
-        this->print(StringBuffer);
-
-        StringBuffer = "Level Size Y : ";
-        StringBuffer += std::to_string(TileEngine.LEVELSIZE_Y);
-        this->print(StringBuffer);
-    } else
-
-        // Spiel sofort verlassen
-        if (CONSOLE_COMMAND("quit")) {
-        this->print("Shutting down ...");
-        GameRunning = false;
-    } else
-
-        // Volle Extrawaffen
-        if (CONSOLE_CHEAT(Cheats[CHEAT::EXTRAS])) {
-        for (int p = 0; p < NUMPLAYERS; p++) {
-            Player[p].PowerLines = 999;
-            Player[p].Grenades = 999;
-            Player[p].SmartBombs = 999;
-        }
-
-        this->print("-> Let's rock!");
-    } else
-
-        // Volle Zeit
+    #if 0
         if (CONSOLE_CHEAT(Cheats[CHEAT::ZEIT])) {
-        TileEngine.Timelimit = 999.0f;
-
-        this->print("-> knowing that there's no rhyme...");
-    } else
-
-        // Volle Waffen
         if (CONSOLE_CHEAT(Cheats[CHEAT::WAFFEN])) {
-        for (int p = 0; p < NUMPLAYERS; p++) {
-            Player[p].CurrentWeaponLevel[3] = 16;
-
-            for (int w = 0; w <= 2; w++)
-                Player[p].CurrentWeaponLevel[w] = 8;
-        }
-
-        this->print("-> Blast Off and Strike The Evil Bydo Empire!");
-    } else
-
-        // Schild
         if (CONSOLE_CHEAT(Cheats[CHEAT::SCHILD])) {
-        for (int i = 0; i < NUMPLAYERS; i++) {
-            /*
-            if (Player[i].Shield <= 0.0f)
-            {
-                Projectiles.PushProjectile (Player[i].xpos, Player[i].ypos, SHIELDSPAWNER, Player[i]);
-                Projectiles.PushProjectile (Player[i].xpos, Player[i].ypos, SHIELDSPAWNER2, Player[i]);
-            }
-
-            // Schild setzen
-            Player[i].Shield = 500.0f;*/
-
-            Player[i].Lives = 99;
-        }
-
-        strcpy_s(Buffer, "-> Live long and prosper!");
-    } else
-
-        // Dauerfeuer
         if (CONSOLE_CHEAT(Cheats[CHEAT::SUPERSHOT])) {
-        for (int i = 0; i < NUMPLAYERS; i++)
-            Player[i].RiesenShotExtra += 500;
-
-        strcpy_s(Buffer, "-> Supershot");
-    } else
-
-        // Dauerfeuer
-        if (CONSOLE_CHEAT(Cheats[CHEAT::AUTOFIRE])) {
-        for (int i = 0; i < NUMPLAYERS; i++)
-            Player[i].AutoFireExtra += 500;
-
-        strcpy_s(Buffer, "-> Autofire");
-    } else
-
-        // Flammenwerfer Mode
         if (CONSOLE_CHEAT(Cheats[CHEAT::FLAMER])) {
-        FlameThrower = !FlameThrower;
-
-        if (FlameThrower) {
-            this->print("-> Flamethrower on");
-        } else {
-            this->print("-> Flamethrower off");
-        }
-    }  // else
-
-    // GodMode
-    if (CONSOLE_CHEAT(Cheats[CHEAT::GOD])) {
-        if (Player[0].GodMode == false) {
-            Player[0].GodMode = true;
-            Player[1].GodMode = true;
-            this->print("-> Godmode on");
-        } else {
-            Player[0].GodMode = false;
-            Player[1].GodMode = false;
-            this->print("-> Godmode off");
-        }
-    }  // else
-
-    // GodMode
-    if (CONSOLE_CHEAT(Cheats[CHEAT::RAD])) {
-        if (Player[0].WheelMode == false) {
-            Player[0].WheelMode = true;
-            Player[1].WheelMode = true;
-            this->print("-> WheelMode on");
-        } else {
-            Player[0].WheelMode = false;
-            Player[1].WheelMode = false;
-            this->print("-> WheelMode off");
-        }
-    }  // else
+        if (CONSOLE_CHEAT(Cheats[CHEAT::GOD])) {
+        if (CONSOLE_CHEAT(Cheats[CHEAT::RAD])) {
+    #endif
 
     // max FPS setzen
     if (CONSOLE_COMMAND_ARG("maxfps ", 7)) {
